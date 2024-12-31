@@ -1,19 +1,29 @@
-## Foundry
+# Smart Wallet
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+Implementation of contracts for [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) account abstraction.
 
 ## Usage
+
+## Usage
+
+Create `.env` file with the following content:
+
+```text
+# using Alchemy
+
+ALCHEMY_API_KEY=YOUR_ALCHEMY_API_KEY
+RPC_ETHEREUM="https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+
+# using Infura
+
+INFURA_API_KEY=YOUR_INFURA_API_KEY
+RPC_ETHEREUM="https://mainnet.infura.io/v3/${INFURA_API_KEY}"
+
+# etherscan
+
+ETHERSCAN_API_KEY_ETHEREUM=YOUR_ETHERSCAN_API_KEY
+ETHERSCAN_URL_ETHEREUM="https://api.etherscan.io/api"
+```
 
 ### Build
 
@@ -25,42 +35,4 @@ $ forge build
 
 ```shell
 $ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
 ```
