@@ -4,9 +4,14 @@ pragma solidity ^0.8.26;
 import {CommonBase} from "forge-std/Base.sol";
 
 abstract contract Errors is CommonBase {
+	// UUPSUpgradeable Proxy
 	error UpgradeFailed();
 	error UnauthorizedCallContext();
+
+	// Initializable
 	error InvalidInitialization();
+
+	// AccessControl & Ownable
 	error InitializedAlready();
 	error InvalidNewOwner();
 	error UnauthorizedOwner();
@@ -14,8 +19,35 @@ abstract contract Errors is CommonBase {
 	error AuthorizedAlready(address account);
 	error InvalidAccount();
 	error InvalidAccountId(uint256 index);
+
+	// SmartWalletFactory
 	error SaltDoesNotStartWithCaller();
 	error SliceOutOfBounds();
+
+	// EntryPoint
+	error FailedOp(uint256 opIndex, string reason);
+	error FailedOpWithRevert(uint256 opIndex, string reason, bytes inner);
+	error PostOpReverted(bytes returnData);
+
+	function expectRevert() internal virtual {
+		vm.expectRevert();
+	}
+
+	function expectRevert(bytes4 selector) internal virtual {
+		vm.expectRevert(selector);
+	}
+
+	function expectRevertFailedOp() internal virtual {
+		vm.expectRevert(FailedOp.selector);
+	}
+
+	function expectRevertFailedOpWithRevert() internal virtual {
+		vm.expectRevert(FailedOpWithRevert.selector);
+	}
+
+	function expectRevertPostOpReverted() internal virtual {
+		vm.expectRevert(PostOpReverted.selector);
+	}
 
 	function expectRevertUpgradeFailed() internal virtual {
 		vm.expectRevert(UpgradeFailed.selector);

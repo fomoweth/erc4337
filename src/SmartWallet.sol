@@ -93,7 +93,7 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, Receiv
 	function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
 	function _domainNameAndVersion() internal pure virtual override returns (string memory, string memory) {
-		return ("SmartWallet", "1");
+		return ("Fomo ETH Smart Wallet", "1");
 	}
 
 	function _getRevision() internal pure virtual override returns (uint256) {

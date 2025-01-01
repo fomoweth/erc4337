@@ -99,6 +99,6 @@ contract SmartWalletV2 is SmartWallet {
 	}
 
 	function _domainNameAndVersion() internal pure virtual override returns (string memory, string memory) {
-		return ("SmartWallet", "2");
+		return ("Fomo ETH Smart Wallet", "2");
 	}
 }
