@@ -10,7 +10,7 @@ abstract contract Ownable {
 		0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0;
 
 	/// bytes32(~uint256(uint32(bytes4(keccak256("OWNER_SLOT_NOT")))))
-	bytes32 internal constant OWNER_SLOT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff74873927;
+	bytes32 private constant OWNER_SLOT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff74873927;
 
 	modifier onlyOwner() {
 		_checkOwner();
@@ -23,57 +23,37 @@ abstract contract Ownable {
 		}
 	}
 
-	function transferOwnership(address newOwner) public virtual onlyOwner {
-		_checkNewOwner(newOwner);
-		_setOwner(newOwner);
+	function transferOwnership(address account) public virtual onlyOwner {
+		_checkNewOwner(account);
+		_setOwner(account);
 	}
 
 	function renounceOwnership() public virtual onlyOwner {
 		_setOwner(address(0));
 	}
 
-	function _initializeOwner(address newOwner) internal virtual {
-		if (_initializeOwnerGuard()) {
-			assembly ("memory-safe") {
-				if sload(OWNER_SLOT) {
-					mstore(0x00, 0x0dc149f0) // AlreadyInitialized()
-					revert(0x1c, 0x04)
-				}
-
-				newOwner := shr(0x60, shl(0x60, newOwner))
-
-				sstore(OWNER_SLOT, or(newOwner, shl(0xff, iszero(newOwner))))
-
-				log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, 0x00, newOwner)
+	function _initializeOwner(address account) internal virtual {
+		assembly ("memory-safe") {
+			if sload(OWNER_SLOT) {
+				mstore(0x00, 0xe7d06772) // InitializedAlready()
+				revert(0x1c, 0x04)
 			}
-		} else {
-			assembly ("memory-safe") {
-				newOwner := shr(0x60, shl(0x60, newOwner))
 
-				sstore(OWNER_SLOT, newOwner)
+			account := shr(0x60, shl(0x60, account))
 
-				log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, 0x00, newOwner)
-			}
+			sstore(OWNER_SLOT, or(account, shl(0xff, iszero(account))))
+
+			log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, 0x00, account)
 		}
 	}
 
-	function _setOwner(address newOwner) internal virtual {
-		if (_initializeOwnerGuard()) {
-			assembly ("memory-safe") {
-				newOwner := shr(0x60, shl(0x60, newOwner))
+	function _setOwner(address account) internal virtual {
+		assembly ("memory-safe") {
+			account := shr(0x60, shl(0x60, account))
 
-				log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, sload(OWNER_SLOT), newOwner)
+			log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, sload(OWNER_SLOT), account)
 
-				sstore(OWNER_SLOT, or(newOwner, shl(0xff, iszero(newOwner))))
-			}
-		} else {
-			assembly ("memory-safe") {
-				newOwner := shr(0x60, shl(0x60, newOwner))
-
-				log3(0x00, 0x00, OWNERSHIP_TRANSFERRED_TOPIC, sload(OWNER_SLOT), newOwner)
-
-				sstore(OWNER_SLOT, newOwner)
-			}
+			sstore(OWNER_SLOT, or(account, shl(0xff, iszero(account))))
 		}
 	}
 
@@ -86,16 +66,12 @@ abstract contract Ownable {
 		}
 	}
 
-	function _checkNewOwner(address newOwner) internal pure virtual {
+	function _checkNewOwner(address account) internal pure virtual {
 		assembly ("memory-safe") {
-			if iszero(shl(0x60, newOwner)) {
+			if iszero(shl(0x60, account)) {
 				mstore(0x00, 0x54a56786) // InvalidNewOwner()
 				revert(0x1c, 0x04)
 			}
 		}
-	}
-
-	function _initializeOwnerGuard() internal pure virtual returns (bool) {
-		return true;
 	}
 }

@@ -12,7 +12,7 @@ abstract contract Initializable {
 	bytes32 private constant INITIALIZING_SLOT = 0x9536fd274b1da513899715f101ac7dd4165956a4323c575571d0d2c5d0ec45f8;
 
 	/// bytes32(uint256(keccak256("LastRevision")) - 1)
-	bytes32 internal constant LAST_REVISION_SLOT = 0x2dcf4d2fa80344eb3d0178ea773deb29f1742cf017431f9ee326c624f742669b;
+	bytes32 private constant LAST_REVISION_SLOT = 0x2dcf4d2fa80344eb3d0178ea773deb29f1742cf017431f9ee326c624f742669b;
 
 	uint64 internal constant MAX_UINT64 = (1 << 64) - 1;
 

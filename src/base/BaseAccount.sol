@@ -6,41 +6,52 @@ import {IAccountExecute} from "src/interfaces/IAccountExecute.sol";
 import {IEntryPoint} from "src/interfaces/entry-point/IEntryPoint.sol";
 import {ECDSA} from "src/libraries/ECDSA.sol";
 import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
-import {Ownable} from "./Ownable.sol";
-import {UUPSUpgradeable} from "./UUPSUpgradeable.sol";
+import {AccessControl} from "./AccessControl.sol";
 
 /// @title BaseAccount
 /// @dev Modified from https://github.com/eth-infinitism/account-abstraction/blob/develop/contracts/core/BaseAccount.sol
 
-abstract contract BaseAccount is IAccount, IAccountExecute, Ownable, UUPSUpgradeable {
+abstract contract BaseAccount is IAccount, IAccountExecute, AccessControl {
 	using ECDSA for bytes32;
+
+	error Unauthorized(address);
 
 	address internal constant ENTRYPOINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
 	uint256 internal constant VALIDATION_SUCCESS = 0;
 	uint256 internal constant VALIDATION_FAILED = 1;
 
-	modifier onlyEntryPoint() virtual {
+	modifier onlyEntryPoint() {
 		assembly ("memory-safe") {
 			if xor(caller(), ENTRYPOINT) {
-				mstore(0x00, 0x82b42900) // Unauthorized()
-				revert(0x1c, 0x04)
+				mstore(0x00, shl(0xe0, 0x8e4a23d6)) // Unauthorized(address)
+				mstore(0x04, and(caller(), 0xffffffffffffffffffffffffffffffffffffffff))
+				revert(0x00, 0x24)
 			}
 		}
 		_;
 	}
 
-	modifier onlyEntryPointOrOwner() virtual {
+	modifier onlyEntryPointOrOwner() {
 		assembly ("memory-safe") {
-			if and(xor(caller(), ENTRYPOINT), xor(caller(), sload(OWNER_SLOT))) {
-				mstore(0x00, 0x82b42900) // Unauthorized()
-				revert(0x1c, 0x04)
+			// equivalent to if (msg.sender != ENTRYPOINT && !isAuthorized(msg.sender)) revert Unauthorized(msg.sender);
+			if xor(caller(), ENTRYPOINT) {
+				mstore(0x00, IS_AUTHORIZED_OFFSET)
+				mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
+				mstore(0x20, keccak256(0x00, 0x40))
+				mstore(0x00, caller())
+
+				if iszero(sload(keccak256(0x00, 0x40))) {
+					mstore(0x00, shl(0xe0, 0x8e4a23d6)) // Unauthorized(address)
+					mstore(0x04, and(caller(), 0xffffffffffffffffffffffffffffffffffffffff))
+					revert(0x00, 0x24)
+				}
 			}
 		}
 		_;
 	}
 
-	modifier payPrefund(uint256 missingAccountFunds) virtual {
+	modifier payPrefund(uint256 missingAccountFunds) {
 		_;
 		assembly ("memory-safe") {
 			if missingAccountFunds {
@@ -56,7 +67,9 @@ abstract contract BaseAccount is IAccount, IAccountExecute, Ownable, UUPSUpgrade
 	function executeUserOp(
 		PackedUserOperation calldata userOp,
 		bytes32 userOpHash
-	) external virtual onlyEntryPointOrOwner {}
+	) external virtual onlyEntryPointOrOwner {
+		//
+	}
 
 	function validateUserOp(
 		PackedUserOperation calldata userOp,
@@ -92,7 +105,7 @@ abstract contract BaseAccount is IAccount, IAccountExecute, Ownable, UUPSUpgrade
 		}
 	}
 
-	function withdrawDepositTo(address recipient, uint256 amount) external payable virtual onlyOwner {
+	function withdrawDepositTo(address recipient, uint256 amount) external payable virtual onlyAuthorized {
 		assembly ("memory-safe") {
 			let ptr := mload(0x40)
 
@@ -136,11 +149,13 @@ abstract contract BaseAccount is IAccount, IAccountExecute, Ownable, UUPSUpgrade
 		PackedUserOperation calldata userOp,
 		bytes32 userOpHash
 	) internal virtual returns (uint256 validationData) {
-		if (owner() != userOpHash.toEthSignedMessageHash().recover(userOp.signature)) return VALIDATION_FAILED;
+		// the address of recovered signer must be one of the authorized accounts to be validated
+		if (!isAuthorized(userOpHash.toEthSignedMessageHash().recover(userOp.signature))) {
+			return VALIDATION_FAILED;
+		}
+
 		return VALIDATION_SUCCESS;
 	}
 
 	function _validateNonce(uint256 nonce) internal view virtual {}
-
-	function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 }
