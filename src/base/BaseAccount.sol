@@ -14,8 +14,6 @@ import {AccessControl} from "./AccessControl.sol";
 abstract contract BaseAccount is IAccount, IAccountExecute, AccessControl {
 	using ECDSA for bytes32;
 
-	error Unauthorized(address);
-
 	address internal constant ENTRYPOINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
 	uint256 internal constant VALIDATION_SUCCESS = 0;

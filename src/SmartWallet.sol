@@ -20,7 +20,7 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 		_initializeOwner(address(1));
 	}
 
-	function initialize(bytes calldata data) external initializer {
+	function initialize(bytes calldata data) external virtual initializer {
 		_initializeOwner(data.toAddress(0));
 		_initializeSubAccounts(data.toAddressArray(1));
 	}
@@ -91,7 +91,7 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 
 	function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-	function _domainNameAndVersion() internal pure override returns (string memory, string memory) {
+	function _domainNameAndVersion() internal pure virtual override returns (string memory, string memory) {
 		return ("SmartWallet", "1");
 	}
 
