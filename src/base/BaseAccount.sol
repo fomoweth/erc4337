@@ -149,7 +149,7 @@ abstract contract BaseAccount is IAccount, IAccountExecute, AccessControl {
 		PackedUserOperation calldata userOp,
 		bytes32 userOpHash
 	) internal virtual returns (uint256 validationData) {
-		// the address of recovered signer must be one of the authorized accounts to be validated
+		// the address of recovered signer must be the one of authorized accounts to be validated
 		if (!isAuthorized(userOpHash.toEthSignedMessageHash().recover(userOp.signature))) {
 			return VALIDATION_FAILED;
 		}

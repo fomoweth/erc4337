@@ -13,9 +13,9 @@ abstract contract AccessControl is Ownable {
 	/// keccak256(bytes("AccountRemoved(uint256,address)"))
 	bytes32 private constant ACCOUNT_REMOVED_TOPIC = 0x4674cfbaa07dd61de1508c228fc2c5abd2a1878fbbd4635684fb378676274df4;
 
-	/// keccak256(abi.encode(uint256(keccak256("erc4337.storage.AccessControl")) - 1)) & ~bytes32(uint256(0xff))
+	/// keccak256(abi.encode(uint256(keccak256("eip4337.storage.AccessControl")) - 1)) & ~bytes32(uint256(0xff))
 	bytes32 internal constant ACCESS_CONTROL_STORAGE_SLOT =
-		0x7a60a9452a2442f24523e25c3644cd5c486dbc0a47f9b0caade7319ed46dbd00;
+		0xed42fce29d9b30d202a575bef6e46cce6aeec59ff590b9a2fb3ceea0896cea00;
 
 	uint256 internal constant NEXT_ID_OFFSET = 0;
 	uint256 internal constant ACCOUNTS_OFFSET = 1;
@@ -82,7 +82,8 @@ abstract contract AccessControl is Ownable {
 				derivedSlot := keccak256(0x00, 0x40)
 			}
 
-			// the owner's address cannot be removed from accounts list
+			// the owner's address cannot be removed from accounts list;
+			// it can only be replace by the new owner's address when the ownership is being transferred
 			if eq(index, 0x00) {
 				mstore(0x00, shl(0xe0, 0xce7793a9)) // InvalidAccountId(uint256)
 				mstore(0x04, index)
