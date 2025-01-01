@@ -109,7 +109,7 @@ abstract contract AccessControl is Ownable {
 		}
 	}
 
-	function _initializeAccounts(address[] calldata accounts) internal virtual {
+	function _initializeSubAccounts(address[] calldata subAccounts) internal virtual {
 		assembly ("memory-safe") {
 			function deriveMapping(slot, key) -> derivedSlot {
 				mstore(0x00, key)
@@ -128,8 +128,8 @@ abstract contract AccessControl is Ownable {
 			}
 
 			// prettier-ignore
-			for { let i } lt(i, accounts.length) { i := add(i, 0x01) } {
-				let account := shr(0x60, shl(0x60, calldataload(add(accounts.offset, shl(0x05, i)))))
+			for { let i } lt(i, subAccounts.length) { i := add(i, 0x01) } {
+				let account := shr(0x60, shl(0x60, calldataload(add(subAccounts.offset, shl(0x05, i)))))
 				if iszero(account) {
 					mstore(0x00, 0x6d187b28) // InvalidAccount()
 					revert(0x1c, 0x04)
@@ -143,17 +143,17 @@ abstract contract AccessControl is Ownable {
 					revert(0x00, 0x24)
 				}
 
-				// equivalent to storedAccounts.accounts[i + 1] = account;
+				// equivalent to storedAccounts.accounts[i + 1] = subAccounts[i];
 				sstore(deriveMapping(accountsSlot, add(i, 0x01)), account)
-				// equivalent to storedAccounts.isAuthorized[account] = true;
+				// equivalent to storedAccounts.isAuthorized[subAccounts[i]] = true;
 				sstore(deriveMapping(isAuthorizedSlot, account), 0x01)
 
 				log3(0x00, 0x00, ACCOUNT_ADDED_TOPIC, add(i, 0x01), account)
 			}
 
 			// set the value of nextId at the end instead of incrementing it every iteration
-			// equivalent to storedAccounts.nextId = accounts.length + 1;
-			sstore(nextIdSlot, add(accounts.length, 0x01))
+			// equivalent to storedAccounts.nextId = subAccounts.length + 1;
+			sstore(nextIdSlot, add(subAccounts.length, 0x01))
 		}
 	}
 

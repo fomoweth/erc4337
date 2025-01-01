@@ -18,13 +18,13 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 	uint256 public constant REVISION = 0x01;
 
 	constructor() {
-		// disableInitializer();
-		// _initializeOwner(address(1));
+		disableInitializer();
+		_initializeOwner(address(1));
 	}
 
 	function initialize(bytes calldata data) external initializer {
 		_initializeOwner(data.toAddress(0));
-		_initializeAccounts(data.toAddressArray(1));
+		_initializeSubAccounts(data.toAddressArray(1));
 	}
 
 	function execute(
@@ -92,4 +92,6 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 	function _getRevision() internal pure virtual override returns (uint256) {
 		return REVISION;
 	}
+
+	receive() external payable {}
 }
