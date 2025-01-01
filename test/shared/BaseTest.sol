@@ -6,26 +6,20 @@ import {Test} from "forge-std/Test.sol";
 import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
 import {SmartWallet} from "src/SmartWallet.sol";
 
-import {Common} from "./Common.sol";
-import {Deployers} from "./Deployers.sol";
+import {Constants} from "./Constants.sol";
 import {Errors} from "./Errors.sol";
 import {Events} from "./Events.sol";
 import {Random} from "./Random.sol";
 
-abstract contract BaseTest is Test, Common, Deployers, Errors, Events, Random {
+abstract contract BaseTest is Test, Constants, Errors, Events, Random {
 	string internal constant network = "ethereum";
 	uint256 internal forkId;
+	uint256 internal snapshotId = MAX_UINT256;
 
 	modifier impersonate(address account) {
 		vm.startPrank(account);
 		_;
 		vm.stopPrank();
-	}
-
-	function setUp() public virtual {
-		fork();
-
-		label(address(ENTRYPOINT), "EntryPoint");
 	}
 
 	function fork() internal virtual {
@@ -39,39 +33,24 @@ abstract contract BaseTest is Test, Common, Deployers, Errors, Events, Random {
 		vm.chainId(ETHEREUM_CHAIN_ID);
 	}
 
-	function getDefaultUserOp() internal pure virtual returns (PackedUserOperation memory userOp) {
-		userOp = PackedUserOperation({
-			sender: address(0),
-			nonce: 0,
-			initCode: "",
-			callData: "",
-			accountGasLimits: bytes32(abi.encodePacked(uint128(2e6), uint128(2e6))),
-			preVerificationGas: 2e6,
-			gasFees: bytes32(abi.encodePacked(uint128(2e6), uint128(2e6))),
-			paymasterAndData: bytes(""),
-			signature: abi.encodePacked(hex"41414141")
-		});
+	function revertToState() internal virtual {
+		if (snapshotId != MAX_UINT256) vm.revertToState(snapshotId);
+		snapshotId = vm.snapshotState();
 	}
 
-	function randomSalt(address owner, uint256 seed) internal virtual returns (bytes32) {
-		seed = bound((seed >> 160), 1, MAX_UINT96);
-		return bytes32((uint256(uint160(owner)) << 96) | seed);
+	function revertToStateAndDelete() internal virtual {
+		if (snapshotId != MAX_UINT256) vm.revertToStateAndDelete(snapshotId);
+		snapshotId = vm.snapshotState();
 	}
 
-	function randomSalt(address owner) internal virtual returns (bytes32) {
-		uint256 seed;
-		while (true) if ((seed = random() >> 160) != 0) break;
-
-		return bytes32((uint256(uint160(owner)) << 96) | seed);
+	function advanceBlock(uint256 blocks) internal virtual {
+		vm.roll(vm.getBlockNumber() + blocks);
+		vm.warp(vm.getBlockTimestamp() + blocks * SECONDS_PER_BLOCK);
 	}
 
-	function getSubAccounts(uint256 n) internal virtual returns (address[] memory accounts) {
-		accounts = new address[](n);
-		for (uint256 i; i < n; ++i) accounts[i] = makeAddr(string.concat("SubAccount #", vm.toString(i)));
-	}
-
-	function getEmptyAccounts() internal pure virtual returns (address[] memory accounts) {
-		return new address[](0);
+	function advanceTime(uint256 time) internal virtual {
+		vm.warp(vm.getBlockTimestamp() + time);
+		vm.roll(vm.getBlockNumber() + time / SECONDS_PER_BLOCK);
 	}
 
 	function checkImplementationSlot(address proxy, address implementation) internal view virtual {
@@ -82,14 +61,56 @@ abstract contract BaseTest is Test, Common, Deployers, Errors, Events, Random {
 		assertEq(uint256(vm.load(proxy, LAST_REVISION_SLOT)), revision);
 	}
 
-	function checkWalletAccounts(SmartWallet wallet, address[] memory subAccounts) internal view virtual {
+	function checkWalletAccounts(address walletAddress, address[] memory subAccounts) internal view virtual {
+		SmartWallet wallet = SmartWallet(payable(walletAddress));
 		address[] memory accounts = wallet.getAccountsList();
 		assertEq(accounts.length - 1, subAccounts.length);
 		assertEq(accounts[0], wallet.owner());
 		assertTrue(wallet.isAuthorized(accounts[0]));
+
 		for (uint256 i; i < subAccounts.length; ++i) {
 			assertEq(subAccounts[i], accounts[i + 1]);
 			assertTrue(wallet.isAuthorized(subAccounts[i]));
+		}
+	}
+
+	function label(address target, string memory name) internal virtual {
+		if (target != address(0) && bytes10(bytes(vm.getLabel(target))) != UNLABELED_PREFIX) vm.label(target, name);
+	}
+
+	function randomSalt(address owner) internal virtual returns (bytes32) {
+		uint256 seed;
+		while (true) if ((seed = random() >> 160) != 0) break;
+
+		return encodeSalt(owner, seed);
+	}
+
+	function encodeSalt(address owner, uint256 seed) internal pure virtual returns (bytes32) {
+		return bytes32((uint256(uint160(owner)) << 96) | (seed >> 160));
+	}
+
+	function bytes32ToAddress(bytes32 input) internal pure virtual returns (address output) {
+		return address(uint160(uint256(input)));
+	}
+
+	function addressToBytes32(address input) internal pure virtual returns (bytes32 output) {
+		return bytes32(bytes20(input));
+	}
+
+	function emptyAccounts() internal pure virtual returns (address[] memory accounts) {
+		return new address[](0);
+	}
+
+	function emptyData() internal pure virtual returns (bytes calldata data) {
+		assembly ("memory-safe") {
+			data.offset := 0x00
+			data.length := 0x00
+		}
+	}
+
+	function isContract(address target) internal view virtual returns (bool flag) {
+		assembly ("memory-safe") {
+			flag := iszero(iszero(extcodesize(target)))
 		}
 	}
 }

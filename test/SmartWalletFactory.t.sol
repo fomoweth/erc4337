@@ -7,36 +7,38 @@ import {SmartWallet} from "src/SmartWallet.sol";
 import {BaseTest} from "test/shared/BaseTest.sol";
 
 contract SmartWalletFactoryTest is BaseTest {
+	SmartWalletFactory internal factory;
+
+	address internal implementation;
+
 	address[] internal subAccounts;
+	uint256 internal numSubAccounts = 3;
 
-	function setUp() public virtual override {
-		super.setUp();
+	function setUp() public virtual {
+		fork();
 
-		deployImplementationAndFactory();
+		vm.label((implementation = address(new SmartWallet())), "SmartWallet Implementation");
+		vm.label(address(factory = new SmartWalletFactory(implementation)), "SmartWalletFactory");
 
-		subAccounts = getSubAccounts(3);
-		assertEq(subAccounts.length, 3);
+		for (uint256 i; i < numSubAccounts; ++i) {
+			subAccounts.push(makeAddr(string.concat("SubAccount #", vm.toString(i))));
+		}
 	}
 
 	function test_createAccount_revertsWithInvalidParameters() public virtual {
-		bytes32 salt;
-		bytes memory params;
-
 		expectRevertSliceOutOfBounds();
-		factory.createAccount(params);
+		factory.createAccount(emptyData());
 
 		expectRevertSaltDoesNotStartWithCaller();
-		params = abi.encode(salt, subAccounts);
-		factory.createAccount(params);
+		factory.createAccount(abi.encode(bytes32(0), subAccounts));
 
 		expectRevertSaltDoesNotStartWithCaller();
-		params = abi.encode((salt = randomSalt(subAccounts[0])), subAccounts);
-		factory.createAccount(params);
+		factory.createAccount(abi.encode(randomSalt(subAccounts[0]), subAccounts));
 	}
 
 	function test_createAccountWithSubAccounts(uint256 seed) public virtual {
 		uint256 value = vm.randomUint(0, 100 ether);
-		bytes32 salt = randomSalt(address(this), seed);
+		bytes32 salt = encodeSalt(address(this), seed);
 		bytes memory params = abi.encode(salt, subAccounts);
 
 		expectEmitOwnershipTransferred(address(0), address(this));
@@ -49,15 +51,15 @@ contract SmartWalletFactoryTest is BaseTest {
 		assertEq(wallet, predicted);
 		assertEq(wallet.balance, value);
 
-		checkImplementationSlot(wallet, address(implementation));
+		checkImplementationSlot(wallet, implementation);
 		checkLastRevisionSlot(wallet, 1);
-		checkWalletAccounts(SmartWallet(payable(wallet)), subAccounts);
+		checkWalletAccounts(wallet, subAccounts);
 	}
 
 	function test_createAccountWithoutSubAccounts(uint256 seed) public virtual {
 		uint256 value = vm.randomUint(0, 100 ether);
-		bytes32 salt = randomSalt(address(this), seed);
-		bytes memory params = abi.encode(salt, getEmptyAccounts());
+		bytes32 salt = encodeSalt(address(this), seed);
+		bytes memory params = abi.encode(salt, emptyAccounts());
 
 		expectEmitOwnershipTransferred(address(0), address(this));
 		expectEmitAccountAdded(0, address(this));
@@ -68,14 +70,14 @@ contract SmartWalletFactoryTest is BaseTest {
 		assertEq(wallet, predicted);
 		assertEq(wallet.balance, value);
 
-		checkImplementationSlot(wallet, address(implementation));
+		checkImplementationSlot(wallet, implementation);
 		checkLastRevisionSlot(wallet, 1);
-		checkWalletAccounts(SmartWallet(payable(wallet)), getEmptyAccounts());
+		checkWalletAccounts(wallet, emptyAccounts());
 	}
 
 	function test_createAccountWithSameSalt() public virtual {
-		uint256 initialValue = 10 ether;
-		uint256 finalValue = 10 ether;
+		uint256 initialValue = vm.randomUint(0, 100 ether);
+		uint256 finalValue = vm.randomUint(0, 100 ether);
 
 		bytes32 salt = randomSalt(address(this));
 		bytes memory params = abi.encode(salt, subAccounts);
@@ -83,9 +85,9 @@ contract SmartWalletFactoryTest is BaseTest {
 		address predicted = factory.computeAddress(salt);
 		address wallet = factory.createAccount{value: initialValue}(params);
 
-		checkImplementationSlot(wallet, address(implementation));
+		checkImplementationSlot(wallet, implementation);
 		checkLastRevisionSlot(wallet, 1);
-		checkWalletAccounts(SmartWallet(payable(wallet)), subAccounts);
+		checkWalletAccounts(wallet, subAccounts);
 
 		assertEq(wallet, predicted);
 		assertEq(wallet.balance, initialValue);
