@@ -7,12 +7,13 @@ import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
 import {BaseAccount} from "src/base/BaseAccount.sol";
 import {EIP712} from "src/base/EIP712.sol";
 import {Initializable} from "src/base/Initializable.sol";
+import {Receiver} from "src/base/Receiver.sol";
 import {UUPSUpgradeable} from "src/base/UUPSUpgradeable.sol";
 
 /// @title SmartWallet
 /// @notice Implementation of ERC4337: Account Abstraction
 
-contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUpgradeable {
+contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, Receiver, UUPSUpgradeable {
 	using BytesLib for bytes;
 
 	constructor() {
@@ -99,5 +100,7 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 		return REVISION();
 	}
 
-	receive() external payable {}
+	receive() external payable virtual {}
+
+	fallback() external payable virtual receiverFallback {}
 }
