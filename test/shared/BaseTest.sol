@@ -86,6 +86,10 @@ abstract contract BaseTest is Test, Common, Deployers, Errors, Events, Random {
 		address[] memory accounts = wallet.getAccountsList();
 		assertEq(accounts.length - 1, subAccounts.length);
 		assertEq(accounts[0], wallet.owner());
-		for (uint256 i; i < subAccounts.length; ++i) assertEq(subAccounts[i], accounts[i + 1]);
+		assertTrue(wallet.isAuthorized(accounts[0]));
+		for (uint256 i; i < subAccounts.length; ++i) {
+			assertEq(subAccounts[i], accounts[i + 1]);
+			assertTrue(wallet.isAuthorized(subAccounts[i]));
+		}
 	}
 }
