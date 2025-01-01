@@ -8,8 +8,6 @@ import {SmartWallet, Call} from "src/SmartWallet.sol";
 
 import {SmartWalletTestBase} from "./SmartWalletTestBase.sol";
 
-// forge test --match-path test/account-abstraction/SmartWallet.t.sol --chain 1 -vvv
-
 contract SmartWalletTest is SmartWalletTestBase {
 	address internal immutable recipient = makeAddr("Recipient");
 
@@ -34,6 +32,52 @@ contract SmartWalletTest is SmartWalletTestBase {
 
 		expectRevertInvalidInitialization();
 		implementation.initialize(params);
+	}
+
+	function test_executeUserOp_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+		expectRevertUnauthorized(invalidSigner.addr);
+		wallet.executeUserOp(getDefaultUserOp(), bytes32(0));
+	}
+
+	function test_executeUserOp() internal virtual impersonate(signer.addr) {}
+
+	function test_validateUserOp_revertsIfNotAuthorized() public virtual {
+		vm.prank(invalidSigner.addr);
+		expectRevertUnauthorized(invalidSigner.addr);
+		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
+
+		vm.prank(signer.addr);
+		expectRevertUnauthorized(signer.addr);
+		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
+
+		vm.prank(subAccounts[0].addr);
+		expectRevertUnauthorized(subAccounts[0].addr);
+		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
+	}
+
+	function test_validateUserOp() internal virtual impersonate(address(ENTRYPOINT)) {}
+
+	function test_execute_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+		expectRevertUnauthorized(invalidSigner.addr);
+		wallet.execute(address(0), 0, emptyData());
+	}
+
+	function test_execute() internal virtual impersonate(signer.addr) {}
+
+	function test_executeBatch_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+		Call[] memory calls = new Call[](1);
+		calls[0] = Call({target: address(0), value: 0, data: emptyData()});
+
+		expectRevertUnauthorized(invalidSigner.addr);
+		wallet.executeBatch(calls);
+	}
+
+	function test_executeBatch() internal virtual impersonate(signer.addr) {
+		Call[] memory calls = new Call[](2);
+		calls[0] = Call({target: address(0), value: 0, data: emptyData()});
+		calls[1] = Call({target: address(0), value: 0, data: emptyData()});
+
+		wallet.executeBatch(calls);
 	}
 
 	function test_addDeposit_succeedsWithAuthorizedAccounts() public virtual {
@@ -139,10 +183,4 @@ contract SmartWalletTest is SmartWalletTestBase {
 
 		assertEq(wallet.getNonce() - 1, nonce);
 	}
-
-	function test_receiverFallbackForERC721() internal virtual {}
-
-	function test_receiverFallbackForERC1155() internal virtual {}
-
-	function test_receiverFallbackForERC1155Batch() internal virtual {}
 }
