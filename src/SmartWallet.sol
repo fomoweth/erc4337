@@ -15,8 +15,6 @@ import {UUPSUpgradeable} from "src/base/UUPSUpgradeable.sol";
 contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUpgradeable {
 	using BytesLib for bytes;
 
-	uint256 public constant REVISION = 0x01;
-
 	constructor() {
 		disableInitializer();
 		_initializeOwner(address(1));
@@ -25,6 +23,14 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 	function initialize(bytes calldata data) external initializer {
 		_initializeOwner(data.toAddress(0));
 		_initializeSubAccounts(data.toAddressArray(1));
+	}
+
+	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
+		return _domainSeparator();
+	}
+
+	function REVISION() public pure virtual returns (uint256) {
+		return 0x01;
 	}
 
 	function execute(
@@ -90,7 +96,7 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 	}
 
 	function _getRevision() internal pure virtual override returns (uint256) {
-		return REVISION;
+		return REVISION();
 	}
 
 	receive() external payable {}
