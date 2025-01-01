@@ -82,7 +82,7 @@ abstract contract AccessControl is Ownable {
 				derivedSlot := keccak256(0x00, 0x40)
 			}
 
-			// the owner's address cannot be removed from accounts list;
+			// the given index cannot be 0, since the owner's address cannot be removed from accounts list;
 			// it can only be replace by the new owner's address when the ownership is being transferred
 			if eq(index, 0x00) {
 				mstore(0x00, shl(0xe0, 0xce7793a9)) // InvalidAccountId(uint256)
@@ -109,7 +109,7 @@ abstract contract AccessControl is Ownable {
 		}
 	}
 
-	function _initializeSubAccounts(address[] calldata accounts) internal virtual {
+	function _initializeAccounts(address[] calldata accounts) internal virtual {
 		assembly ("memory-safe") {
 			function deriveMapping(slot, key) -> derivedSlot {
 				mstore(0x00, key)
@@ -135,6 +135,8 @@ abstract contract AccessControl is Ownable {
 					revert(0x1c, 0x04)
 				}
 
+				// validate that the account's address at current index is not authorized yet;
+				// therefore, every account's address from the given array must be unique and not be equal to the owner's address
 				if sload(deriveMapping(isAuthorizedSlot, account)) {
 					mstore(0x00, shl(0xe0, 0xeed275b4)) // AuthorizedAlready(address)
 					mstore(0x04, account)

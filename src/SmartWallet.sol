@@ -23,9 +23,8 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, UUPSUp
 	}
 
 	function initialize(bytes calldata data) external initializer {
-		//
 		_initializeOwner(data.toAddress(0));
-		_initializeSubAccounts(data.toAddressArray(1));
+		_initializeAccounts(data.toAddressArray(1));
 	}
 
 	function execute(
