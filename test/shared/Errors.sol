@@ -14,6 +14,8 @@ abstract contract Errors is CommonBase {
 	error AuthorizedAlready(address account);
 	error InvalidAccount();
 	error InvalidAccountId(uint256 index);
+	error SaltDoesNotStartWithCaller();
+	error SliceOutOfBounds();
 
 	function expectRevertUpgradeFailed() internal virtual {
 		vm.expectRevert(UpgradeFailed.selector);
@@ -53,5 +55,13 @@ abstract contract Errors is CommonBase {
 
 	function expectRevertInvalidAccountId(uint256 id) internal virtual {
 		vm.expectRevert(abi.encodeWithSelector(InvalidAccountId.selector, id));
+	}
+
+	function expectRevertSaltDoesNotStartWithCaller() internal virtual {
+		vm.expectRevert(SaltDoesNotStartWithCaller.selector);
+	}
+
+	function expectRevertSliceOutOfBounds() internal virtual {
+		vm.expectRevert(SliceOutOfBounds.selector);
 	}
 }

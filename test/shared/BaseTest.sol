@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 
 import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
+import {SmartWallet} from "src/SmartWallet.sol";
 
 import {Common} from "./Common.sol";
 import {Deployers} from "./Deployers.sol";
@@ -52,11 +53,39 @@ abstract contract BaseTest is Test, Common, Deployers, Errors, Events, Random {
 		});
 	}
 
-	function checkImplementationSlot(address proxy, address implementation) internal virtual {
+	function randomSalt(address owner, uint256 seed) internal virtual returns (bytes32) {
+		seed = bound((seed >> 160), 1, MAX_UINT96);
+		return bytes32((uint256(uint160(owner)) << 96) | seed);
+	}
+
+	function randomSalt(address owner) internal virtual returns (bytes32) {
+		uint256 seed;
+		while (true) if ((seed = random() >> 160) != 0) break;
+
+		return bytes32((uint256(uint160(owner)) << 96) | seed);
+	}
+
+	function getSubAccounts(uint256 n) internal virtual returns (address[] memory accounts) {
+		accounts = new address[](n);
+		for (uint256 i; i < n; ++i) accounts[i] = makeAddr(string.concat("SubAccount #", vm.toString(i)));
+	}
+
+	function getEmptyAccounts() internal pure virtual returns (address[] memory accounts) {
+		return new address[](0);
+	}
+
+	function checkImplementationSlot(address proxy, address implementation) internal view virtual {
 		assertEq(bytes32ToAddress(vm.load(proxy, IMPLEMENTATION_SLOT)), implementation);
 	}
 
-	function checkLastRevisionSlot(address proxy, uint256 revision) internal virtual {
+	function checkLastRevisionSlot(address proxy, uint256 revision) internal view virtual {
 		assertEq(uint256(vm.load(proxy, LAST_REVISION_SLOT)), revision);
+	}
+
+	function checkWalletAccounts(SmartWallet wallet, address[] memory subAccounts) internal view virtual {
+		address[] memory accounts = wallet.getAccountsList();
+		assertEq(accounts.length - 1, subAccounts.length);
+		assertEq(accounts[0], wallet.owner());
+		for (uint256 i; i < subAccounts.length; ++i) assertEq(subAccounts[i], accounts[i + 1]);
 	}
 }

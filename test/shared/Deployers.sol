@@ -10,7 +10,7 @@ abstract contract Deployers is Constants {
 	SmartWalletFactory internal factory;
 	SmartWallet internal implementation;
 
-	function deployFactory() internal virtual {
+	function deployImplementationAndFactory() internal virtual {
 		label(address(implementation = new SmartWallet()), "SmartWallet Implementation");
 		label(address(factory = new SmartWalletFactory(address(implementation))), "SmartWalletFactory");
 	}

@@ -18,7 +18,7 @@ abstract contract Constants is CommonBase {
 	uint256 internal constant MAX_UINT256 = (1 << 256) - 1;
 	uint160 internal constant MAX_UINT160 = (1 << 160) - 1;
 	uint128 internal constant MAX_UINT128 = (1 << 128) - 1;
-	uint104 internal constant MAX_UINT104 = (1 << 104) - 1;
+	uint96 internal constant MAX_UINT96 = (1 << 96) - 1;
 	uint64 internal constant MAX_UINT64 = (1 << 64) - 1;
 
 	uint256 internal constant VALIDATION_SUCCESS = 0;
