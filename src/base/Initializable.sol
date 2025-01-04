@@ -17,7 +17,7 @@ abstract contract Initializable {
 	uint64 internal constant MAX_UINT64 = (1 << 64) - 1;
 
 	modifier initializer() {
-		uint256 revision = _getRevision();
+		uint256 revision = REVISION();
 		bool isTopLevelCall;
 
 		assembly ("memory-safe") {
@@ -65,5 +65,5 @@ abstract contract Initializable {
 		}
 	}
 
-	function _getRevision() internal pure virtual returns (uint256);
+	function REVISION() public pure virtual returns (uint256);
 }

@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Ownable} from "./Ownable.sol";
+import {IAccessControl} from "src/interfaces/wallet/IAccessControl.sol";
+import {Ownable2Step} from "./Ownable2Step.sol";
 
 /// @title AccessControl
 /// @notice Provides functions to manage accounts for the smart wallet.
 
-abstract contract AccessControl is Ownable {
+abstract contract AccessControl is IAccessControl, Ownable2Step {
 	/// keccak256(bytes("AccountAdded(uint256,address)"))
 	bytes32 private constant ACCOUNT_ADDED_TOPIC = 0xcdf90f998fb308726a3c0cc206e7170e5ad701ef1666da2ea6642ec5bddade79;
 
 	/// keccak256(bytes("AccountRemoved(uint256,address)"))
 	bytes32 private constant ACCOUNT_REMOVED_TOPIC = 0x4674cfbaa07dd61de1508c228fc2c5abd2a1878fbbd4635684fb378676274df4;
 
-	/// keccak256(abi.encode(uint256(keccak256("eip4337.storage.AccessControl")) - 1)) & ~bytes32(uint256(0xff))
+	/// keccak256(abi.encode(uint256(keccak256("AccessControl.storage.slot")) - 1)) & ~bytes32(uint256(0xff))
 	bytes32 internal constant ACCESS_CONTROL_STORAGE_SLOT =
-		0xed42fce29d9b30d202a575bef6e46cce6aeec59ff590b9a2fb3ceea0896cea00;
+		0x8d900783fdf1b574be676081264a7bc91515444110d4b5394dbe5d85f73d2000;
 
 	uint256 internal constant NEXT_ID_OFFSET = 0;
 	uint256 internal constant ACCOUNTS_OFFSET = 1;
@@ -55,7 +56,7 @@ abstract contract AccessControl is Ownable {
 			let accountsSlot := deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, ACCOUNTS_OFFSET)
 			let isAuthorizedSlot := deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, IS_AUTHORIZED_OFFSET)
 
-			// equivalent to if (storedAccounts.isAuthorized[account]) revert AuthorizedAlready(account);
+			// equivalent to if (storage.isAuthorized[account]) revert AuthorizedAlready(account);
 			if sload(deriveMapping(isAuthorizedSlot, account)) {
 				mstore(0x00, shl(0xe0, 0xeed275b4)) // AuthorizedAlready(address)
 				mstore(0x04, account)
@@ -63,11 +64,11 @@ abstract contract AccessControl is Ownable {
 			}
 
 			let index := sload(nextIdSlot)
-			// equivalent to ++storedAccounts.nextId;
+			// equivalent to ++storage.nextId;
 			sstore(nextIdSlot, add(index, 0x01))
-			// equivalent to storedAccounts.accounts[index] = account;
+			// equivalent to storage.accounts[index] = account;
 			sstore(deriveMapping(accountsSlot, index), account)
-			// equivalent to storedAccounts.isAuthorized[account] = true;
+			// equivalent to storage.isAuthorized[account] = true;
 			sstore(deriveMapping(isAuthorizedSlot, account), 0x01)
 
 			log3(0x00, 0x00, ACCOUNT_ADDED_TOPIC, index, account)
@@ -92,7 +93,7 @@ abstract contract AccessControl is Ownable {
 
 			let accountsSlot := deriveMapping(deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, ACCOUNTS_OFFSET), index)
 
-			// equivalent to account = storedAccounts.accounts[index];
+			// equivalent to account = storage.accounts[index];
 			let account := sload(accountsSlot)
 			if iszero(account) {
 				mstore(0x00, shl(0xe0, 0xce7793a9)) // InvalidAccountId(uint256)
@@ -100,9 +101,9 @@ abstract contract AccessControl is Ownable {
 				revert(0x00, 0x24)
 			}
 
-			// equivalent to delete storedAccounts.accounts[index];
+			// equivalent to delete storage.accounts[index];
 			sstore(accountsSlot, 0x00)
-			// equivalent to delete storedAccounts.isAuthorized[account];
+			// equivalent to delete storage.isAuthorized[account];
 			sstore(deriveMapping(deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, IS_AUTHORIZED_OFFSET), account), 0x00)
 
 			log3(0x00, 0x00, ACCOUNT_REMOVED_TOPIC, index, account)
@@ -164,6 +165,7 @@ abstract contract AccessControl is Ownable {
 	}
 
 	function _setOwner(address account) internal virtual override {
+		address oldOwner = owner();
 		super._setOwner(account);
 
 		assembly ("memory-safe") {
@@ -173,12 +175,31 @@ abstract contract AccessControl is Ownable {
 				derivedSlot := keccak256(0x00, 0x40)
 			}
 
-			// equivalent to storedAccounts.accounts[0] = account;
+			// equivalent to storage.accounts[0] = account;
 			sstore(deriveMapping(deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, ACCOUNTS_OFFSET), 0x00), account)
-			// equivalent to storedAccounts.isAuthorized[account] = true;
+			// equivalent to storage.isAuthorized[account] = true;
 			sstore(deriveMapping(deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, IS_AUTHORIZED_OFFSET), account), 0x01)
+			// equivalent to storage.isAuthorized[oldOwner] = false;
+			sstore(deriveMapping(deriveMapping(ACCESS_CONTROL_STORAGE_SLOT, IS_AUTHORIZED_OFFSET), oldOwner), 0x00)
 
 			log3(0x00, 0x00, ACCOUNT_ADDED_TOPIC, 0x00, account)
+		}
+	}
+
+	function _checkNewPendingOwner(address account) internal view virtual override {
+		super._checkNewPendingOwner(account);
+
+		assembly ("memory-safe") {
+			mstore(0x00, IS_AUTHORIZED_OFFSET)
+			mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
+			mstore(0x20, keccak256(0x00, 0x40))
+			mstore(0x00, account)
+
+			// equivalent to if(!storage.isAuthorized[account]) revert InvalidNewPendingOwner();
+			if iszero(sload(keccak256(0x00, 0x40))) {
+				mstore(0x00, 0x9f2b7601) // InvalidNewPendingOwner()
+				revert(0x1c, 0x04)
+			}
 		}
 	}
 
@@ -215,23 +236,23 @@ abstract contract AccessControl is Ownable {
 		}
 	}
 
+	function nextAccountId() public view virtual returns (uint256 id) {
+		assembly ("memory-safe") {
+			mstore(0x00, NEXT_ID_OFFSET)
+			mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
+			// equivalent to id = storage.nextId;
+			id := sload(keccak256(0x00, 0x40))
+		}
+	}
+
 	function getAccountAt(uint256 index) public view virtual returns (address account) {
 		assembly ("memory-safe") {
 			mstore(0x00, ACCOUNTS_OFFSET)
 			mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
 			mstore(0x20, keccak256(0x00, 0x40))
 			mstore(0x00, index)
-			// equivalent to account = storedAccounts.accounts[index];
+			// equivalent to account = storage.accounts[index];
 			account := sload(keccak256(0x00, 0x40))
-		}
-	}
-
-	function nextAccountId() public view virtual returns (uint256 id) {
-		assembly ("memory-safe") {
-			mstore(0x00, NEXT_ID_OFFSET)
-			mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
-			// equivalent to id = storedAccounts.nextId;
-			id := sload(keccak256(0x00, 0x40))
 		}
 	}
 
@@ -241,7 +262,7 @@ abstract contract AccessControl is Ownable {
 			mstore(0x20, ACCESS_CONTROL_STORAGE_SLOT)
 			mstore(0x20, keccak256(0x00, 0x40))
 			mstore(0x00, shr(0x60, shl(0x60, account)))
-			// equivalent to flag = storedAccounts.isAuthorized[account];
+			// equivalent to flag = storage.isAuthorized[account];
 			flag := sload(keccak256(0x00, 0x40))
 		}
 	}
