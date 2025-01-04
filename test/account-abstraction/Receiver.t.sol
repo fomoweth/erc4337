@@ -24,7 +24,6 @@ contract ReceiverTest is SmartWalletTestBase {
 
 	function test_receiverFallbackForERC1155Batch() public virtual impersonate(signer.addr) {
 		MockERC1155 erc1155 = new MockERC1155();
-
 		erc1155.mint(signer.addr, 1, 1, emptyData());
 		erc1155.mint(signer.addr, 2, 1, emptyData());
 

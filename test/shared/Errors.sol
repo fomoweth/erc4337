@@ -14,7 +14,9 @@ abstract contract Errors is CommonBase {
 	// AccessControl & Ownable
 	error InitializedAlready();
 	error InvalidNewOwner();
+	error InvalidNewPendingOwner();
 	error UnauthorizedOwner();
+	error UnauthorizedPendingOwner();
 	error Unauthorized(address account);
 	error AuthorizedAlready(address account);
 	error InvalidAccount();
@@ -69,8 +71,16 @@ abstract contract Errors is CommonBase {
 		vm.expectRevert(InvalidNewOwner.selector);
 	}
 
+	function expectRevertInvalidNewPendingOwner() internal virtual {
+		vm.expectRevert(InvalidNewPendingOwner.selector);
+	}
+
 	function expectRevertUnauthorizedOwner() internal virtual {
 		vm.expectRevert(UnauthorizedOwner.selector);
+	}
+
+	function expectRevertUnauthorizedPendingOwner() internal virtual {
+		vm.expectRevert(UnauthorizedPendingOwner.selector);
 	}
 
 	function expectRevertUnauthorized(address account) internal virtual {

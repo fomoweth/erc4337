@@ -6,9 +6,18 @@ import {SmartWalletTestBase} from "./SmartWalletTestBase.sol";
 contract AccessControlTest is SmartWalletTestBase {
 	address internal account;
 
-	function test_addAccount_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+	function test_addAccount_revertsIfNotAuthorized() public virtual {
+		account = makeAddr("NewSubAccount");
+
+		vm.prank(invalidSigner.addr);
 		expectRevertUnauthorizedOwner();
-		wallet.addAccount(makeAddr("NewSubAccount"));
+		wallet.addAccount(account);
+
+		for (uint256 i; i < subAccounts.length; ++i) {
+			expectRevertUnauthorizedOwner();
+			vm.prank(subAccounts[i].addr);
+			wallet.addAccount(account);
+		}
 	}
 
 	function test_addAccount_revertsWithInvalidAccount() public virtual impersonate(signer.addr) {
@@ -30,9 +39,21 @@ contract AccessControlTest is SmartWalletTestBase {
 		assertEq(wallet.getAccountsLength(), numSubAccounts * 2 + 1);
 	}
 
-	function test_removeAccountAt_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+	function test_removeAccountAt_revertsIfNotAuthorized() public virtual {
+		uint256 accountId = wallet.nextAccountId();
+
+		vm.prank(signer.addr);
+		wallet.addAccount(makeAddr("NewSubAccount"));
+
 		expectRevertUnauthorizedOwner();
-		wallet.removeAccountAt(1);
+		vm.prank(invalidSigner.addr);
+		wallet.removeAccountAt(accountId);
+
+		for (uint256 i; i < subAccounts.length; ++i) {
+			expectRevertUnauthorizedOwner();
+			vm.prank(subAccounts[i].addr);
+			wallet.removeAccountAt(accountId);
+		}
 	}
 
 	function test_removeAccountAt_revertsWithInvalidAccountId() public virtual impersonate(signer.addr) {
@@ -66,26 +87,86 @@ contract AccessControlTest is SmartWalletTestBase {
 		assertEq(wallet.nextAccountId(), allAccounts.length);
 	}
 
-	function test_transferOwnership_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
+	function test_transferOwnership_revertsIfNotAuthorized() public virtual {
 		expectRevertUnauthorizedOwner();
+		vm.prank(invalidSigner.addr);
 		wallet.transferOwnership(invalidSigner.addr);
+
+		for (uint256 i; i < subAccounts.length; ++i) {
+			expectRevertUnauthorizedOwner();
+			vm.prank(subAccounts[i].addr);
+			wallet.transferOwnership(subAccounts[i].addr);
+		}
 	}
 
 	function test_transferOwnership_revertsWithInvalidAccount() public virtual impersonate(signer.addr) {
-		expectRevertInvalidNewOwner();
+		expectRevertInvalidNewPendingOwner();
 		wallet.transferOwnership(address(0));
+
+		expectRevertInvalidNewPendingOwner();
+		wallet.transferOwnership(invalidSigner.addr);
 	}
 
 	function test_transferOwnership() public virtual impersonate(signer.addr) {
-		account = makeAddr("NewOwner");
+		assertEq(wallet.pendingOwner(), address(0));
+		revertToState();
 
-		expectEmitOwnershipTransferred(signer.addr, account);
-		expectEmitAccountAdded(0, account);
+		for (uint256 i; i < subAccounts.length; ++i) {
+			account = subAccounts[i].addr;
 
-		wallet.transferOwnership(account);
+			expectEmitOwnershipTransferStarted(signer.addr, account);
+			wallet.transferOwnership(account);
 
-		assertEq(wallet.owner(), account);
-		assertEq(wallet.getAccountAt(0), account);
-		assertTrue(wallet.isAuthorized(account));
+			assertEq(wallet.pendingOwner(), account);
+			assertEq(wallet.owner(), signer.addr);
+			revertToState();
+		}
+	}
+
+	function test_acceptOwnership_revertsIfNotAuthorized() public virtual {
+		assertEq(wallet.pendingOwner(), address(0));
+
+		expectRevertUnauthorizedPendingOwner();
+		vm.prank(signer.addr);
+		wallet.acceptOwnership();
+
+		expectRevertUnauthorizedPendingOwner();
+		vm.prank(invalidSigner.addr);
+		wallet.acceptOwnership();
+
+		for (uint256 i; i < subAccounts.length; ++i) {
+			expectRevertUnauthorizedPendingOwner();
+			vm.prank(subAccounts[i].addr);
+			wallet.acceptOwnership();
+		}
+	}
+
+	function test_acceptOwnership() public virtual {
+		assertEq(wallet.pendingOwner(), address(0));
+		revertToState();
+
+		for (uint256 i; i < subAccounts.length; ++i) {
+			account = subAccounts[i].addr;
+
+			expectEmitOwnershipTransferStarted(signer.addr, account);
+			vm.prank(signer.addr);
+			wallet.transferOwnership(account);
+
+			assertEq(wallet.pendingOwner(), account);
+			assertEq(wallet.owner(), signer.addr);
+
+			expectEmitOwnershipTransferred(signer.addr, account);
+			expectEmitAccountAdded(0, account);
+
+			vm.prank(account);
+			wallet.acceptOwnership();
+
+			assertEq(wallet.pendingOwner(), address(0));
+			assertEq(wallet.owner(), account);
+			assertEq(wallet.getAccountAt(0), account);
+			assertTrue(wallet.isAuthorized(account));
+			assertFalse(wallet.isAuthorized(signer.addr));
+			revertToState();
+		}
 	}
 }

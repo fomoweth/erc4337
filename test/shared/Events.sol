@@ -52,7 +52,8 @@ abstract contract Events is CommonBase {
 	// Initializable
 	event Initialized(uint64 revision);
 
-	// Ownable
+	// Ownable2Step
+	event OwnershipTransferStarted(address indexed oldOwner, address indexed newOwner);
 	event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
 
 	// AccessControl
@@ -155,6 +156,11 @@ abstract contract Events is CommonBase {
 	function expectEmitInitialized(uint64 revision) internal virtual {
 		vm.expectEmit(true, true, true, true);
 		emit Initialized(revision);
+	}
+
+	function expectEmitOwnershipTransferStarted(address oldOwner, address newOwner) internal virtual {
+		vm.expectEmit(true, true, true, true);
+		emit OwnershipTransferStarted(oldOwner, newOwner);
 	}
 
 	function expectEmitOwnershipTransferred(address oldOwner, address newOwner) internal virtual {

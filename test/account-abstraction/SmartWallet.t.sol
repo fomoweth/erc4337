@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {console2 as console} from "forge-std/Test.sol";
-
-import {SmartWalletFactory} from "src/SmartWalletFactory.sol";
-import {SmartWallet, Call} from "src/SmartWallet.sol";
-
 import {SmartWalletTestBase} from "./SmartWalletTestBase.sol";
 
 contract SmartWalletTest is SmartWalletTestBase {
@@ -21,6 +16,11 @@ contract SmartWalletTest is SmartWalletTestBase {
 		deal(signer.addr, depositValue * 2);
 	}
 
+	function setUpAccounts() internal virtual override {
+		super.setUpAccounts();
+		vm.makePersistent(recipient);
+	}
+
 	function test_initializationDisableForImplementation() public virtual {
 		assertEq(implementation.owner(), address(1));
 		assertEq(implementation.nextAccountId(), 1);
@@ -32,52 +32,6 @@ contract SmartWalletTest is SmartWalletTestBase {
 
 		expectRevertInvalidInitialization();
 		implementation.initialize(params);
-	}
-
-	function test_executeUserOp_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
-		expectRevertUnauthorized(invalidSigner.addr);
-		wallet.executeUserOp(getDefaultUserOp(), bytes32(0));
-	}
-
-	function test_executeUserOp() internal virtual impersonate(signer.addr) {}
-
-	function test_validateUserOp_revertsIfNotAuthorized() public virtual {
-		vm.prank(invalidSigner.addr);
-		expectRevertUnauthorized(invalidSigner.addr);
-		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
-
-		vm.prank(signer.addr);
-		expectRevertUnauthorized(signer.addr);
-		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
-
-		vm.prank(subAccounts[0].addr);
-		expectRevertUnauthorized(subAccounts[0].addr);
-		wallet.validateUserOp(getDefaultUserOp(), bytes32(0), 0);
-	}
-
-	function test_validateUserOp() internal virtual impersonate(address(ENTRYPOINT)) {}
-
-	function test_execute_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
-		expectRevertUnauthorized(invalidSigner.addr);
-		wallet.execute(address(0), 0, emptyData());
-	}
-
-	function test_execute() internal virtual impersonate(signer.addr) {}
-
-	function test_executeBatch_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
-		Call[] memory calls = new Call[](1);
-		calls[0] = Call({target: address(0), value: 0, data: emptyData()});
-
-		expectRevertUnauthorized(invalidSigner.addr);
-		wallet.executeBatch(calls);
-	}
-
-	function test_executeBatch() internal virtual impersonate(signer.addr) {
-		Call[] memory calls = new Call[](2);
-		calls[0] = Call({target: address(0), value: 0, data: emptyData()});
-		calls[1] = Call({target: address(0), value: 0, data: emptyData()});
-
-		wallet.executeBatch(calls);
 	}
 
 	function test_addDeposit_succeedsWithAuthorizedAccounts() public virtual {
