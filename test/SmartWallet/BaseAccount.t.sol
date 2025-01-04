@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {SmartWalletTestBase} from "./SmartWalletTestBase.sol";
 
-contract SmartWalletTest is SmartWalletTestBase {
+contract BaseAccountTest is SmartWalletTestBase {
 	address internal immutable recipient = makeAddr("Recipient");
 
 	uint256 internal depositValue;
@@ -18,7 +18,6 @@ contract SmartWalletTest is SmartWalletTestBase {
 
 	function setUpAccounts() internal virtual override {
 		super.setUpAccounts();
-		vm.makePersistent(recipient);
 	}
 
 	function test_initializationDisableForImplementation() public virtual {

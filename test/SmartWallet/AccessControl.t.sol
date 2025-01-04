@@ -100,10 +100,10 @@ contract AccessControlTest is SmartWalletTestBase {
 	}
 
 	function test_transferOwnership_revertsWithInvalidAccount() public virtual impersonate(signer.addr) {
-		expectRevertInvalidNewPendingOwner();
+		expectRevertInvalidNewOwner();
 		wallet.transferOwnership(address(0));
 
-		expectRevertInvalidNewPendingOwner();
+		expectRevertInvalidNewOwner();
 		wallet.transferOwnership(invalidSigner.addr);
 	}
 
@@ -168,5 +168,10 @@ contract AccessControlTest is SmartWalletTestBase {
 			assertFalse(wallet.isAuthorized(signer.addr));
 			revertToState();
 		}
+	}
+
+	function test_renounceOwnership_revertsWithNotSupported() public virtual impersonate(signer.addr) {
+		expectRevertNotSupported();
+		wallet.renounceOwnership();
 	}
 }

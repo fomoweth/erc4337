@@ -16,16 +16,16 @@ contract ReceiverTest is SmartWalletTestBase {
 
 	function test_receiverFallbackForERC1155() public virtual impersonate(signer.addr) {
 		MockERC1155 erc1155 = new MockERC1155();
-		erc1155.mint(signer.addr, 1, 1, emptyData());
+		erc1155.mint(signer.addr, 1, 1, emptyBytes());
 
 		expectEmitTransferSingleERC1155(signer.addr, signer.addr, address(wallet), 1, 1);
-		erc1155.safeTransferFrom(signer.addr, address(wallet), 1, 1, emptyData());
+		erc1155.safeTransferFrom(signer.addr, address(wallet), 1, 1, emptyBytes());
 	}
 
 	function test_receiverFallbackForERC1155Batch() public virtual impersonate(signer.addr) {
 		MockERC1155 erc1155 = new MockERC1155();
-		erc1155.mint(signer.addr, 1, 1, emptyData());
-		erc1155.mint(signer.addr, 2, 1, emptyData());
+		erc1155.mint(signer.addr, 1, 1, emptyBytes());
+		erc1155.mint(signer.addr, 2, 1, emptyBytes());
 
 		uint256[] memory ids = new uint256[](2);
 		ids[0] = 1;
@@ -36,6 +36,6 @@ contract ReceiverTest is SmartWalletTestBase {
 		amounts[1] = 1;
 
 		expectEmitTransferBatchERC1155(signer.addr, signer.addr, address(wallet), ids, amounts);
-		erc1155.safeBatchTransferFrom(signer.addr, address(wallet), ids, amounts, emptyData());
+		erc1155.safeBatchTransferFrom(signer.addr, address(wallet), ids, amounts, emptyBytes());
 	}
 }

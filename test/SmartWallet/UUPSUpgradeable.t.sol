@@ -8,7 +8,6 @@ import {SmartWalletTestBase} from "./SmartWalletTestBase.sol";
 
 contract UUPSUpgradeableTest is SmartWalletTestBase {
 	address internal implementationV2;
-	SmartWalletV2 internal walletV2;
 
 	function setUp() public virtual override {
 		super.setUp();
@@ -24,20 +23,20 @@ contract UUPSUpgradeableTest is SmartWalletTestBase {
 
 	function test_notDelegatedGuard() public virtual {
 		expectRevertUnauthorizedCallContext();
-		implementation.upgradeToAndCall(address(1), emptyData());
+		implementation.upgradeToAndCall(address(1), emptyBytes());
 	}
 
 	function test_upgradeToAndCall_revertsIfNotAuthorized() public virtual impersonate(invalidSigner.addr) {
 		expectRevertUnauthorizedOwner();
-		wallet.upgradeToAndCall(implementationV2, emptyData());
+		wallet.upgradeToAndCall(implementationV2, emptyBytes());
 	}
 
 	function test_upgradeToAndCall_revertsWithInvalidImplementation() public virtual impersonate(signer.addr) {
 		expectRevertUpgradeFailed();
-		wallet.upgradeToAndCall(address(0), emptyData());
+		wallet.upgradeToAndCall(address(0), emptyBytes());
 
 		expectRevertUpgradeFailed();
-		wallet.upgradeToAndCall(address(factory), emptyData());
+		wallet.upgradeToAndCall(address(factory), emptyBytes());
 	}
 
 	function test_upgradeToAndCall() public virtual impersonate(signer.addr) {
@@ -99,6 +98,6 @@ contract SmartWalletV2 is SmartWallet {
 	}
 
 	function _domainNameAndVersion() internal pure virtual override returns (string memory, string memory) {
-		return ("Fomo ETH Smart Wallet", "2");
+		return ("Fomo WETH Smart Wallet", "2");
 	}
 }
