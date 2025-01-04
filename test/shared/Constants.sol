@@ -3,22 +3,13 @@ pragma solidity ^0.8.26;
 
 import {CommonBase} from "forge-std/Base.sol";
 import {IEntryPoint} from "src/interfaces/entry-point/IEntryPoint.sol";
+import {Currency} from "src/types/Currency.sol";
 
 abstract contract Constants is CommonBase {
-	bytes10 internal constant UNLABELED_PREFIX = bytes10("unlabeled:");
-
 	uint256 internal constant ETHEREUM_CHAIN_ID = 1;
-
-	uint256 internal constant BLOCKS_PER_DAY = 7200;
-	uint256 internal constant BLOCKS_PER_YEAR = 2628000;
-	uint256 internal constant SECONDS_PER_BLOCK = 12;
-	uint256 internal constant SECONDS_PER_DAY = 86400;
-	uint256 internal constant SECONDS_PER_YEAR = 31536000;
 
 	uint256 internal constant MAX_UINT256 = (1 << 256) - 1;
 	uint160 internal constant MAX_UINT160 = (1 << 160) - 1;
-	uint128 internal constant MAX_UINT128 = (1 << 128) - 1;
-	uint96 internal constant MAX_UINT96 = (1 << 96) - 1;
 	uint64 internal constant MAX_UINT64 = (1 << 64) - 1;
 
 	uint256 internal constant VALIDATION_SUCCESS = 0;
@@ -32,8 +23,15 @@ abstract contract Constants is CommonBase {
 
 	bytes32 internal constant LAST_REVISION_SLOT = 0x2dcf4d2fa80344eb3d0178ea773deb29f1742cf017431f9ee326c624f742669b;
 
-	/// keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-	bytes32 internal constant DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
+	bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+	bytes4 internal constant ERC1271_INVALID = 0xffffffff;
 
 	IEntryPoint internal constant ENTRYPOINT = IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
+
+	Currency internal constant WETH = Currency.wrap(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+	Currency internal constant STETH = Currency.wrap(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+	Currency internal constant WSTETH = Currency.wrap(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+	Currency internal constant LINK = Currency.wrap(0x514910771AF9Ca656af840dff83E8264EcF986CA);
+	Currency internal constant UNI = Currency.wrap(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
+	Currency internal constant USDC = Currency.wrap(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 }

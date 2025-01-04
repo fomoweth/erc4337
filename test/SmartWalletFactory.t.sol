@@ -27,7 +27,7 @@ contract SmartWalletFactoryTest is BaseTest {
 
 	function test_createAccount_revertsWithInvalidParameters() public virtual {
 		expectRevertSliceOutOfBounds();
-		factory.createAccount(emptyData());
+		factory.createAccount(emptyBytes());
 
 		expectRevertSaltDoesNotStartWithCaller();
 		factory.createAccount(abi.encode(bytes32(0), subAccounts));

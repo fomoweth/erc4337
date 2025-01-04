@@ -3,7 +3,6 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 
-import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
 import {SmartWallet} from "src/SmartWallet.sol";
 
 import {Constants} from "./Constants.sol";
@@ -13,7 +12,9 @@ import {Random} from "./Random.sol";
 
 abstract contract BaseTest is Test, Constants, Errors, Events, Random {
 	string internal constant network = "ethereum";
+
 	uint256 internal forkId;
+
 	uint256 internal snapshotId = MAX_UINT256;
 
 	modifier impersonate(address account) {
@@ -43,16 +44,6 @@ abstract contract BaseTest is Test, Constants, Errors, Events, Random {
 		snapshotId = vm.snapshotState();
 	}
 
-	function advanceBlock(uint256 blocks) internal virtual {
-		vm.roll(vm.getBlockNumber() + blocks);
-		vm.warp(vm.getBlockTimestamp() + blocks * SECONDS_PER_BLOCK);
-	}
-
-	function advanceTime(uint256 time) internal virtual {
-		vm.warp(vm.getBlockTimestamp() + time);
-		vm.roll(vm.getBlockNumber() + time / SECONDS_PER_BLOCK);
-	}
-
 	function checkImplementationSlot(address proxy, address implementation) internal view virtual {
 		assertEq(bytes32ToAddress(vm.load(proxy, IMPLEMENTATION_SLOT)), implementation);
 	}
@@ -72,10 +63,6 @@ abstract contract BaseTest is Test, Constants, Errors, Events, Random {
 			assertEq(subAccounts[i], accounts[i + 1]);
 			assertTrue(wallet.isAuthorized(subAccounts[i]));
 		}
-	}
-
-	function label(address target, string memory name) internal virtual {
-		if (target != address(0) && bytes10(bytes(vm.getLabel(target))) != UNLABELED_PREFIX) vm.label(target, name);
 	}
 
 	function randomSalt(address owner) internal virtual returns (bytes32) {
@@ -101,7 +88,7 @@ abstract contract BaseTest is Test, Constants, Errors, Events, Random {
 		return new address[](0);
 	}
 
-	function emptyData() internal pure virtual returns (bytes calldata data) {
+	function emptyBytes() internal pure virtual returns (bytes calldata data) {
 		assembly ("memory-safe") {
 			data.offset := 0x00
 			data.length := 0x00

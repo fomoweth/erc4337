@@ -4,6 +4,8 @@ pragma solidity ^0.8.26;
 import {CommonBase} from "forge-std/Base.sol";
 
 abstract contract Errors is CommonBase {
+	error NotSupported();
+
 	// UUPSUpgradeable Proxy
 	error UpgradeFailed();
 	error UnauthorizedCallContext();
@@ -14,7 +16,6 @@ abstract contract Errors is CommonBase {
 	// AccessControl & Ownable
 	error InitializedAlready();
 	error InvalidNewOwner();
-	error InvalidNewPendingOwner();
 	error UnauthorizedOwner();
 	error UnauthorizedPendingOwner();
 	error Unauthorized(address account);
@@ -26,29 +27,12 @@ abstract contract Errors is CommonBase {
 	error SaltDoesNotStartWithCaller();
 	error SliceOutOfBounds();
 
-	// EntryPoint
-	error FailedOp(uint256 opIndex, string reason);
-	error FailedOpWithRevert(uint256 opIndex, string reason, bytes inner);
-	error PostOpReverted(bytes returnData);
-
 	function expectRevert() internal virtual {
 		vm.expectRevert();
 	}
 
-	function expectRevert(bytes4 selector) internal virtual {
-		vm.expectRevert(selector);
-	}
-
-	function expectRevertFailedOp() internal virtual {
-		vm.expectRevert(FailedOp.selector);
-	}
-
-	function expectRevertFailedOpWithRevert() internal virtual {
-		vm.expectRevert(FailedOpWithRevert.selector);
-	}
-
-	function expectRevertPostOpReverted() internal virtual {
-		vm.expectRevert(PostOpReverted.selector);
+	function expectRevertNotSupported() internal virtual {
+		vm.expectRevert(NotSupported.selector);
 	}
 
 	function expectRevertUpgradeFailed() internal virtual {
@@ -69,10 +53,6 @@ abstract contract Errors is CommonBase {
 
 	function expectRevertInvalidNewOwner() internal virtual {
 		vm.expectRevert(InvalidNewOwner.selector);
-	}
-
-	function expectRevertInvalidNewPendingOwner() internal virtual {
-		vm.expectRevert(InvalidNewPendingOwner.selector);
 	}
 
 	function expectRevertUnauthorizedOwner() internal virtual {
