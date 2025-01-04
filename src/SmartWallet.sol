@@ -3,7 +3,9 @@ pragma solidity ^0.8.26;
 
 import {ISmartWallet} from "src/interfaces/ISmartWallet.sol";
 import {BytesLib} from "src/libraries/BytesLib.sol";
+import {ECDSA} from "src/libraries/ECDSA.sol";
 import {Call} from "src/types/Call.sol";
+import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
 import {BaseAccount} from "src/base/BaseAccount.sol";
 import {EIP712} from "src/base/EIP712.sol";
 import {Initializable} from "src/base/Initializable.sol";
@@ -15,6 +17,7 @@ import {UUPSUpgradeable} from "src/base/UUPSUpgradeable.sol";
 
 contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, Receiver, UUPSUpgradeable {
 	using BytesLib for bytes;
+	using ECDSA for bytes32;
 
 	constructor() {
 		disableInitializer();
@@ -24,6 +27,10 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, Receiv
 	function initialize(bytes calldata data) external virtual initializer {
 		_initializeOwner(data.toAddress(0));
 		_initializeSubAccounts(data.toAddressArray(1));
+	}
+
+	function DOMAIN_SEPARATOR() external view virtual returns (bytes32) {
+		return _domainSeparator();
 	}
 
 	function REVISION() public pure virtual override returns (uint256) {
@@ -90,6 +97,17 @@ contract SmartWallet is ISmartWallet, BaseAccount, EIP712, Initializable, Receiv
 
 	function _domainNameAndVersion() internal pure virtual override returns (string memory, string memory) {
 		return ("Fomo WETH Smart Wallet", "1");
+	}
+
+	function _validateUserOp(
+		PackedUserOperation calldata userOp,
+		bytes32 userOpHash
+	) internal virtual override returns (uint256 validationData) {
+		bool success = _isValidSignature(userOpHash.toEthSignedMessageHash(), userOp.signature);
+
+		assembly ("memory-safe") {
+			validationData := iszero(success)
+		}
 	}
 
 	receive() external payable virtual {}

@@ -69,54 +69,6 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 		return IEntryPoint(ENTRYPOINT);
 	}
 
-	function executeUserOp(PackedUserOperation calldata userOp, bytes32) external payable virtual onlyEntryPoint {
-		bytes calldata callData = userOp.callData[4:];
-
-		assembly ("memory-safe") {
-			calldatacopy(0x00, callData.offset, callData.length)
-
-			if iszero(delegatecall(gas(), address(), 0x00, callData.length, 0x00, 0x00)) {
-				mstore(0x00, 0xacfdb444) // ExecutionFailed()
-				revert(0xc1, 0x04)
-			}
-		}
-	}
-
-	function validateUserOp(
-		PackedUserOperation calldata userOp,
-		bytes32 userOpHash,
-		uint256 missingAccountFunds
-	) external virtual onlyEntryPoint payPrefund(missingAccountFunds) returns (uint256 validationData) {
-		validationData = _validateSignature(userOp, userOpHash);
-		_validateNonce(userOp.nonce);
-	}
-
-	function _validateSignature(
-		PackedUserOperation calldata userOp,
-		bytes32 userOpHash
-	) internal virtual returns (uint256 validationData) {
-		bool success = _isValidSignature(userOpHash.toEthSignedMessageHash(), userOp.signature);
-
-		assembly ("memory-safe") {
-			validationData := iszero(success)
-		}
-	}
-
-	function _validateNonce(uint256 nonce) internal view virtual {}
-
-	function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4 magicValue) {
-		bool success = _isValidSignature(hash, signature);
-
-		assembly ("memory-safe") {
-			magicValue := shl(0xe0, or(0x1626ba7e, sub(0x00, iszero(success))))
-		}
-	}
-
-	function _isValidSignature(bytes32 hash, bytes calldata signature) internal view virtual returns (bool) {
-		// the address of recovered signer must be one of the authorized accounts to be valid
-		return isAuthorized(hash.recover(signature));
-	}
-
 	function getDeposit() external view virtual returns (uint256 deposit) {
 		assembly ("memory-safe") {
 			let ptr := mload(0x40)
@@ -197,4 +149,33 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 			mstore(mload(0x40), add(ptr, 0x40))
 		}
 	}
+
+	function validateUserOp(
+		PackedUserOperation calldata userOp,
+		bytes32 userOpHash,
+		uint256 missingAccountFunds
+	) external virtual onlyEntryPoint payPrefund(missingAccountFunds) returns (uint256) {
+		return _validateUserOp(userOp, userOpHash);
+	}
+
+	function isValidSignature(
+		bytes32 hash,
+		bytes calldata signature
+	) external view virtual returns (bytes4 magicValue) {
+		bool success = _isValidSignature(hash, signature);
+
+		assembly ("memory-safe") {
+			magicValue := shl(0xe0, or(0x1626ba7e, sub(0x00, iszero(success))))
+		}
+	}
+
+	function _isValidSignature(bytes32 hash, bytes calldata signature) internal view virtual returns (bool) {
+		// the address of recovered signer must be one of the authorized accounts to be valid
+		return isAuthorized(hash.recover(signature));
+	}
+
+	function _validateUserOp(
+		PackedUserOperation calldata userOp,
+		bytes32 userOpHash
+	) internal virtual returns (uint256 validationData);
 }
