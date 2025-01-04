@@ -12,9 +12,9 @@ Implementation of [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337): Account A
 
 The first index of the accounts list in the `AccessControl` contract is reserved for the owner of the `SmartWallet` contract. This address cannot be removed independently and will automatically update to the new owner's address when ownership is transferred. Authorized accounts (sub-accounts) are permitted to interact with the `SmartWallet`, including signing transactions, similar to the owner. However, certain actions are restricted exclusively to the owner:
 
-1. **Proxy Upgrades**: Only the owner can initiate and execute proxy upgrades.
-2. **Sub-Account Management**: Adding or removing sub-accounts is limited to the owner.
-3. **Ownership Transfer**: Ownership can only be transferred to an authorized sub-account and must be performed by the owner.
+- **Proxy Upgrades**: Only the owner can initiate and execute proxy upgrades.
+- **Sub-Account Management**: Adding or removing sub-accounts is limited to the owner.
+- **Ownership Transfer**: Ownership can only be transferred to an authorized sub-account and must be performed by the owner.
 
 ## Usage
 
