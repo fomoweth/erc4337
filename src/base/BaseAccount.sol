@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IBaseAccount} from "src/interfaces/wallet/IBaseAccount.sol";
+import {IBaseAccount} from "src/interfaces/account/IBaseAccount.sol";
 import {IEntryPoint} from "src/interfaces/entry-point/IEntryPoint.sol";
 import {ECDSA} from "src/libraries/ECDSA.sol";
-import {Call} from "src/types/Call.sol";
 import {PackedUserOperation} from "src/types/PackedUserOperation.sol";
 import {AccessControl} from "./AccessControl.sol";
 
@@ -15,9 +14,6 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 	using ECDSA for bytes32;
 
 	address internal constant ENTRYPOINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
-
-	uint256 internal constant VALIDATION_SUCCESS = 0;
-	uint256 internal constant VALIDATION_FAILED = 1;
 
 	modifier onlyEntryPoint() {
 		assembly ("memory-safe") {
@@ -49,6 +45,17 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 		_;
 	}
 
+	modifier onlyEntryPointOrSelf() {
+		assembly ("memory-safe") {
+			if and(xor(caller(), ENTRYPOINT), xor(caller(), address())) {
+				mstore(0x00, shl(0xe0, 0x8e4a23d6)) // Unauthorized(address)
+				mstore(0x04, and(caller(), 0xffffffffffffffffffffffffffffffffffffffff))
+				revert(0x00, 0x24)
+			}
+		}
+		_;
+	}
+
 	modifier payPrefund(uint256 missingAccountFunds) {
 		_;
 		assembly ("memory-safe") {
@@ -62,11 +69,17 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 		return IEntryPoint(ENTRYPOINT);
 	}
 
-	function executeUserOp(
-		PackedUserOperation calldata userOp,
-		bytes32 userOpHash
-	) external virtual onlyEntryPointOrOwner {
-		//
+	function executeUserOp(PackedUserOperation calldata userOp, bytes32) external payable virtual onlyEntryPoint {
+		bytes calldata callData = userOp.callData[4:];
+
+		assembly ("memory-safe") {
+			calldatacopy(0x00, callData.offset, callData.length)
+
+			if iszero(delegatecall(gas(), address(), 0x00, callData.length, 0x00, 0x00)) {
+				mstore(0x00, 0xacfdb444) // ExecutionFailed()
+				revert(0xc1, 0x04)
+			}
+		}
 	}
 
 	function validateUserOp(
@@ -78,60 +91,30 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 		_validateNonce(userOp.nonce);
 	}
 
-	function execute(
-		address target,
-		uint256 value,
-		bytes calldata data
-	) external payable virtual onlyEntryPointOrOwner returns (bytes memory result) {
+	function _validateSignature(
+		PackedUserOperation calldata userOp,
+		bytes32 userOpHash
+	) internal virtual returns (uint256 validationData) {
+		bool success = _isValidSignature(userOpHash.toEthSignedMessageHash(), userOp.signature);
+
 		assembly ("memory-safe") {
-			result := mload(0x40)
-			calldatacopy(result, data.offset, data.length)
-
-			if iszero(call(gas(), target, value, result, data.length, codesize(), 0x00)) {
-				returndatacopy(result, 0x00, returndatasize())
-				revert(result, returndatasize())
-			}
-
-			mstore(result, returndatasize())
-			let offset := add(result, 0x20)
-			returndatacopy(offset, 0x00, returndatasize())
-			mstore(0x40, add(offset, returndatasize()))
+			validationData := iszero(success)
 		}
 	}
 
-	function executeBatch(
-		Call[] calldata calls
-	) external payable virtual onlyEntryPointOrOwner returns (bytes[] memory results) {
+	function _validateNonce(uint256 nonce) internal view virtual {}
+
+	function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4 magicValue) {
+		bool success = _isValidSignature(hash, signature);
+
 		assembly ("memory-safe") {
-			results := mload(0x40)
-			mstore(results, calls.length)
-
-			let r := add(0x20, results)
-			let m := add(r, shl(0x05, calls.length))
-			calldatacopy(r, calls.offset, shl(0x05, calls.length))
-
-			// prettier-ignore
-			for { let end := m } iszero(eq(r, end)) { r := add(r, 0x20) } {
-				let e := add(calls.offset, mload(r))
-				let o := add(e, calldataload(add(e, 0x40)))
-				calldatacopy(m, add(o, 0x20), calldataload(o))
-
-				if iszero(
-					call(gas(), calldataload(e), calldataload(add(e, 0x20)), m, calldataload(o), codesize(), 0x00)
-				) {
-					returndatacopy(m, 0x00, returndatasize())
-					revert(m, returndatasize())
-				}
-
-				mstore(r, m)
-				mstore(m, returndatasize())
-				let p := add(m, 0x20)
-				returndatacopy(p, 0x00, returndatasize())
-				m := add(p, returndatasize())
-			}
-
-			mstore(0x40, m)
+			magicValue := shl(0xe0, or(0x1626ba7e, sub(0x00, iszero(success))))
 		}
+	}
+
+	function _isValidSignature(bytes32 hash, bytes calldata signature) internal view virtual returns (bool) {
+		// the address of recovered signer must be one of the authorized accounts to be valid
+		return isAuthorized(hash.recover(signature));
 	}
 
 	function getDeposit() external view virtual returns (uint256 deposit) {
@@ -214,18 +197,4 @@ abstract contract BaseAccount is IBaseAccount, AccessControl {
 			mstore(mload(0x40), add(ptr, 0x40))
 		}
 	}
-
-	function _validateSignature(
-		PackedUserOperation calldata userOp,
-		bytes32 userOpHash
-	) internal virtual returns (uint256 validationData) {
-		// the address of recovered signer must be one of the authorized accounts to be validated
-		if (!isAuthorized(userOpHash.toEthSignedMessageHash().recover(userOp.signature))) {
-			return VALIDATION_FAILED;
-		}
-
-		return VALIDATION_SUCCESS;
-	}
-
-	function _validateNonce(uint256 nonce) internal view virtual {}
 }

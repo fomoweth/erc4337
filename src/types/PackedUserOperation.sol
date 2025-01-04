@@ -118,6 +118,13 @@ library PackedUserOperationLibrary {
 				: emptyCalldata();
 	}
 
+	function parsePaymasterAndData(PackedUserOperation calldata userOp) internal pure returns (bytes calldata) {
+		return
+			userOp.paymasterAndData.length >= PAYMASTER_DATA_OFFSET
+				? userOp.paymasterAndData[PAYMASTER_DATA_OFFSET:]
+				: emptyCalldata();
+	}
+
 	function parsePaymasterStaticFields(
 		bytes calldata paymasterAndData
 	) internal pure returns (address paymaster, uint256 validationGasLimit, uint256 postOpGasLimit) {

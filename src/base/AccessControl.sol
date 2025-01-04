@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IAccessControl} from "src/interfaces/wallet/IAccessControl.sol";
+import {IAccessControl} from "src/interfaces/account/IAccessControl.sol";
 import {Ownable2Step} from "./Ownable2Step.sol";
 
 /// @title AccessControl
@@ -186,8 +186,8 @@ abstract contract AccessControl is IAccessControl, Ownable2Step {
 		}
 	}
 
-	function _checkNewPendingOwner(address account) internal view virtual override {
-		super._checkNewPendingOwner(account);
+	function _checkNewOwner(address account) internal view virtual override {
+		super._checkNewOwner(account);
 
 		assembly ("memory-safe") {
 			mstore(0x00, IS_AUTHORIZED_OFFSET)
@@ -195,9 +195,9 @@ abstract contract AccessControl is IAccessControl, Ownable2Step {
 			mstore(0x20, keccak256(0x00, 0x40))
 			mstore(0x00, account)
 
-			// equivalent to if(!storage.isAuthorized[account]) revert InvalidNewPendingOwner();
+			// equivalent to if(!storage.isAuthorized[account]) revert InvalidNewOwner();
 			if iszero(sload(keccak256(0x00, 0x40))) {
-				mstore(0x00, 0x9f2b7601) // InvalidNewPendingOwner()
+				mstore(0x00, 0x54a56786) // InvalidNewOwner()
 				revert(0x1c, 0x04)
 			}
 		}

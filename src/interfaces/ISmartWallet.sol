@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IAccessControl} from "./wallet/IAccessControl.sol";
-import {IBaseAccount} from "./wallet/IBaseAccount.sol";
-import {IOwnable2Step} from "./wallet/IOwnable2Step.sol";
+import {IAccessControl} from "./account/IAccessControl.sol";
+import {IBaseAccount} from "./account/IBaseAccount.sol";
 
-interface ISmartWallet is IBaseAccount, IAccessControl, IOwnable2Step {}
+interface ISmartWallet is IBaseAccount, IAccessControl {}

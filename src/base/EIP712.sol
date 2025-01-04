@@ -41,6 +41,10 @@ abstract contract EIP712 {
 		_cachedDomainSeparator = separator;
 	}
 
+	function DOMAIN_SEPARATOR() external view virtual returns (bytes32) {
+		return _domainSeparator();
+	}
+
 	function _domainNameAndVersion() internal view virtual returns (string memory name, string memory version);
 
 	function _domainNameAndVersionMayChange() internal pure virtual returns (bool result) {}

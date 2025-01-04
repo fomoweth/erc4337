@@ -40,6 +40,12 @@ abstract contract UUPSUpgradeable {
 		return ERC1967_IMPLEMENTATION_SLOT;
 	}
 
+	function implementation() public view virtual returns (address impl) {
+		assembly ("memory-safe") {
+			impl := sload(ERC1967_IMPLEMENTATION_SLOT)
+		}
+	}
+
 	function upgradeToAndCall(address newImplementation, bytes calldata data) public payable virtual onlyProxy {
 		_authorizeUpgrade(newImplementation);
 
